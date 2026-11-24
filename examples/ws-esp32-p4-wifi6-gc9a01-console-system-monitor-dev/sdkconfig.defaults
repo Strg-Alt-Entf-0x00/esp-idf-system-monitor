@@ -1,0 +1,52 @@
+# ============================================================================
+# ESP32-P4 Target Configuration
+# ============================================================================
+CONFIG_IDF_TARGET="esp32p4"
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+
+# ============================================================================
+# Flash Configuration (32 MB QIO Mode)
+# ============================================================================
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y
+
+# ============================================================================
+# Partition Table
+# ============================================================================
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# ============================================================================
+# PSRAM Configuration (Required for 240x240 16-bit display sprite)
+# ============================================================================
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=16384
+CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=32768
+CONFIG_SPIRAM_MODE_HEX=y
+CONFIG_SPIRAM_SPEED_200M=y
+
+# ============================================================================
+# Compiler Optimization
+# ============================================================================
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_COMPILER_CXX_EXCEPTIONS=y
+
+# ============================================================================
+# FreeRTOS Configuration
+# ============================================================================
+CONFIG_FREERTOS_HZ=1000
+
+# ============================================================================
+# Console Configuration (UART0, 115200)
+# ============================================================================
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_UART=y
+CONFIG_ESP_CONSOLE_UART_NUM_0=y
+CONFIG_ESP_CONSOLE_UART_BAUDRATE_115200=y
+
+# ============================================================================
+# Logging Configuration
+# ============================================================================
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_MAXIMUM_LEVEL_VERBOSE=y

@@ -1,0 +1,14 @@
+version: "1.0.0"
+description: "Hardware telemetry, peak tracker, and circular GC9A01 display engine for ESP-IDF system monitor"
+license: "PolyForm-Noncommercial-1.0.0"
+dependencies:
+  idf:
+    version: ">=5.0.0"
+
+  lovyan03/LovyanGFX:
+    git: https://github.com/lovyan03/LovyanGFX.git
+    version: 1.3.0
+
+  espressif/esp_lcd_gc9a01:
+    version: "^2.0.0"
+
