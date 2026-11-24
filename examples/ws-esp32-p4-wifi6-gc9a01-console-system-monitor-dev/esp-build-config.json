@@ -7,15 +7,20 @@
         "path": "C:\\esp\\v6.0.2\\esp-idf"
     },
     "serial": {
-        "monitor_baudrate": 115200,
         "port": "COM4",
-        "flash_baudrate": 460800
+        "flash_baudrate": 460800,
+        "monitor_baudrate": 115200
     },
     "storage": {
         "flash_images": false
     },
     "build": {
         "ccache": true
+    },
+    "logging": {
+        "enabled": true,
+        "directory": ".logs",
+        "keep_last_n_logs": 50
     },
     "version": 1
 }
