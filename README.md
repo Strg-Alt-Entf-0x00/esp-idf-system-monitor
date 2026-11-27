@@ -26,13 +26,14 @@ Universal Hardware Telemetry, Peak Tracker, Circular Gauge Display Engine, and A
 ## Developer & End-User Tools
 
 ### 1. Web Serial Studio (No Python / Zero Installation)
-Open [`tools-web/system_monitor_console.html`](tools-web/system_monitor_console.html) in Google Chrome, Microsoft Edge, Opera, or Brave:
-- Direct serial connection to COM4 via Web Serial API.
-- Virtual GC9A01 display simulator in real-time.
-- Workload scenario switcher (`Idle`, `Gaming`, `Render`, `Warning`, `Heat Alarm`).
-- Live hardware sliders for CPU/GPU temperatures, loads, fans, network, and RAM.
-- One-click autonomous 13-point diagnostic test runner.
-- Live serial console monitor with interactive command input.
+Open [`tools-web/index.html`](tools-web/index.html) in Google Chrome, Microsoft Edge, Opera, or Brave:
+- Modular local HTML, CSS, and JavaScript application under `tools-web/`.
+- Direct serial connection via Web Serial API with standard USB connect icon.
+- Hardware-accurate GC9A01 240×240 circular display engine replicating `system_monitor_display.cpp` (solid 12px arc, 20 scale ticks, dual natural left-to-right curved text, peak spoke marker, and offline beacon).
+- Theme switcher (Mono, Cyan, Amber), dual language toggle (EN, DE), and live brightness dimmer.
+- Displays only packets received from the connected firmware; no simulated telemetry or sensor sliders are used.
+- Unknown or `nan` readings render as `--` / `Unknown`, and stale links enter the waiting state.
+- Collapsible bottom terminal drawer with real-time CLI console.
 
 ### 2. Autonomous Diagnostics
 - [`tests/test_system_monitor_autonomously.py`](tests/test_system_monitor_autonomously.py): End-to-end 13-point automated test suite with hardware RTS reset.

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Monitor Studio · GC9A01 240×240 Circular Telemetry Console</title>
+
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/console.css">
+</head>
+<body>
+
+  <!-- ========================================================================
+   * SHELL: App Header
+   * ======================================================================== -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-title">SYSTEM MONITOR STUDIO</div>
+      <div class="brand-sub">Circular Display Telemetry</div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Connection Status Badge -->
+      <div class="conn-status-badge" id="connStatusBadge">
+        <span class="conn-indicator-dot" id="connDot"></span>
+        <span id="connLabel">WAITING FOR DEVICE</span>
+      </div>
+
+      <!-- Web Serial Connect Button (Standard USB cable SVG) -->
+      <button class="icon-btn" id="btnConnect" data-tooltip="Connect ESP32 (115200 Baud)" aria-label="Connect ESP32" onclick="toggleSerialConnection()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v6m0 0l3-3m-3 3L9 5M5 11h14M7 11v5a5 5 0 0010 0v-5"></path>
+        </svg>
+      </button>
+
+      <!-- Toggle Terminal Drawer (Pure Icon Button) -->
+      <button class="icon-btn" id="btnToggleTerm" data-tooltip="Toggle Serial Console" aria-label="Toggle Serial Console" aria-expanded="false" onclick="toggleTerminalDrawer()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+      </button>
+
+      <!-- Help & Reference Modal Button -->
+      <button class="icon-btn" id="btnHelp" data-tooltip="Help &amp; Reference" aria-label="Open Help" onclick="openHelpModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+   * WORKSPACE CONTENT: Sidebar + Center Stage Grid
+   * ======================================================================== -->
+  <main class="studio-workspace-grid">
+    
+    <!-- Left Sidebar: Controls & Live Hardware Simulation -->
+    <aside class="workspace-sidebar">
+
+      <!-- Card 1: Metric Selection & Auto-Cycle -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>Device Metric</span>
+          <span id="lblCycleStateBadge" style="font-family: var(--font-mono); color: var(--text-muted);">UNKNOWN</span>
+        </div>
+
+        <div class="metric-pills-grid" id="metricPills">
+          <button class="metric-pill-btn" onclick="requestMetric(0)" disabled>CPU Temp</button>
+          <button class="metric-pill-btn" onclick="requestMetric(1)" disabled>GPU Temp</button>
+          <button class="metric-pill-btn" onclick="requestMetric(2)" disabled>CPU Load</button>
+          <button class="metric-pill-btn" onclick="requestMetric(3)" disabled>GPU Load</button>
+          <button class="metric-pill-btn" onclick="requestMetric(4)" disabled>RAM Usage</button>
+          <button class="metric-pill-btn" onclick="requestMetric(5)" disabled>VRAM Usage</button>
+          <button class="metric-pill-btn" onclick="requestMetric(6)" disabled>SSD Temp</button>
+          <button class="metric-pill-btn" onclick="requestMetric(7)" disabled>CPU Fan</button>
+          <button class="metric-pill-btn" onclick="requestMetric(8)" disabled>Network</button>
+          <button class="metric-pill-btn" onclick="requestMetric(9)" disabled>CPU Cores Avg.</button>
+        </div>
+
+        <div class="field-row">
+          <div class="field-head">
+            <span class="field-label">Auto-Cycle Interval</span>
+            <span class="field-val" id="valCycleMs">Unknown</span>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" min="0" max="3600000" step="1000" value="0" id="rngCycleInterval" onchange="onCycleIntervalChange(this.value)" disabled>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Live telemetry availability -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>Live Telemetry</span>
+          <span id="telemetryAge">WAITING</span>
+        </div>
+        <div class="field-row"><div class="field-head"><span class="field-label">PC telemetry link</span><span class="field-val" id="pcLinkStatus">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">Packet sequence</span><span class="field-val" id="telemetrySequence">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">CPU / GPU temperature</span><span class="field-val" id="telemetryTemps">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">CPU / GPU load</span><span class="field-val" id="telemetryLoads">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">RAM / VRAM</span><span class="field-val" id="telemetryMemory">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">CPU fan</span><span class="field-val" id="telemetryFan">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">Network down / up</span><span class="field-val" id="telemetryNetwork">Unknown</span></div></div>
+      </div>
+
+      <!-- Card 3: Hardware names reported by firmware -->
+      <div class="panel-card">
+        <div class="panel-title">
+          <span>Reported Hardware</span>
+        </div>
+        <div class="field-row"><div class="field-head"><span class="field-label">CPU</span><span class="field-val" id="infoCpu">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">GPU</span><span class="field-val" id="infoGpu">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">RAM</span><span class="field-val" id="infoRam">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">Storage</span><span class="field-val" id="infoSsd">Unknown</span></div></div>
+        <div class="field-row"><div class="field-head"><span class="field-label">Network</span><span class="field-val" id="infoNet">Unknown</span></div></div>
+      </div>
+
+    </aside>
+
+    <!-- Center Stage: GC9A01 240x240 display preview driven by device telemetry -->
+    <section class="display-stage">
+      
+      <!-- Stage Top Control Bar: Mode, Theme, Backlight -->
+      <div class="stage-top-bar">
+        <div class="stage-mode-seg" id="segTheme" aria-label="Local preview theme">
+          <button id="btnThemeMono" onclick="setTheme(0)">Mono</button>
+          <button id="btnThemeCyan" class="active" onclick="setTheme(1)">Cyan</button>
+          <button id="btnThemeAmber" onclick="setTheme(2)">Amber</button>
+        </div>
+
+        <div class="stage-mode-seg" id="segLang" aria-label="Local preview language">
+          <button id="btnLangEn" class="active" onclick="setLanguage('en')">EN</button>
+          <button id="btnLangDe" onclick="setLanguage('de')">DE</button>
+        </div>
+
+        <div class="brightness-control">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-muted); flex-shrink: 0;">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <input type="range" class="brightness-slider" id="rngBrightness" min="10" max="100" value="100" oninput="setBrightness(this.value)" aria-label="Preview brightness">
+          <span class="brightness-val" id="valBrightness">100%</span>
+        </div>
+      </div>
+
+      <!-- Bezel & Circular 240x240 Display Canvas -->
+      <div class="dial-bezel">
+        <canvas id="dispCanvas" width="240" height="240"></canvas>
+      </div>
+
+      <!-- Quick Action Toolbar: Hardware Encoder / Carousel Navigation -->
+      <div class="stage-quick-bar">
+        <button class="icon-btn" id="btnPrevMetric" data-tooltip="Rotate Left (Prev Metric)" onclick="rotateEncoder(-1)" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnToggleCycle" data-tooltip="Toggle Auto-Cycle (Hold / Run)" onclick="toggleCycle()" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="iconCycle">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnNextMetric" data-tooltip="Rotate Right (Next Metric)" onclick="rotateEncoder(1)" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnEncoderClick" data-tooltip="Send Encoder Click" onclick="clickEncoder()" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"></circle>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnAlarmAck" data-tooltip="Acknowledge / Snooze Alarms" onclick="ackAlarms()" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================
+   * STATUS BAR
+   * ======================================================================== -->
+  <footer class="status-bar">
+    <div class="status-left">
+      <div class="status-item">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Disconnected</span>
+      </div>
+    </div>
+    <div class="status-right">
+      <div class="status-item" id="statusInfo">Ready · System Telemetry</div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================
+   * SHELL: Collapsible Bottom Terminal Drawer
+   * ======================================================================== -->
+  <div class="bottom-terminal-drawer" id="bottomTerminalDrawer" role="region" aria-label="Serial console">
+    <div class="drawer-header">
+      <div class="drawer-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+        <span>Serial Console · 115200 baud</span>
+      </div>
+      <div class="drawer-actions" role="group" aria-label="Console and device query actions">
+        <button class="icon-btn" id="btnQueryStatus" type="button" data-tooltip="Query status" aria-label="Query device status" onclick="sendSerialCmd('status')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnQueryTelem" type="button" data-tooltip="Query telemetry" aria-label="Query telemetry" onclick="sendSerialCmd('telemetry')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnQueryPeaks" type="button" data-tooltip="Query peaks" aria-label="Query peaks" onclick="sendSerialCmd('peaks')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnQueryInfo" type="button" data-tooltip="Query hardware info" aria-label="Query hardware information" onclick="sendSerialCmd('info')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnCopyTerm" type="button" data-tooltip="Copy console" aria-label="Copy console" onclick="copyTerminalLog()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="8" y="8" width="13" height="13" rx="2"></rect>
+            <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnDownloadTerm" type="button" data-tooltip="Download console" aria-label="Download console" onclick="downloadTerminalLog()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnClearTerm" type="button" data-tooltip="Clear console" aria-label="Clear console" onclick="clearTerminalLog()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" id="btnCloseDrawer" type="button" data-tooltip="Close console" aria-label="Close console" onclick="toggleTerminalDrawer(false)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="drawer-body" id="termBody"></div>
+    <div class="drawer-footer">
+      <input type="text" class="term-input" id="termInput" placeholder="Type a command and press Enter..." aria-label="Serial command" autocomplete="off" spellcheck="false">
+      <button class="icon-btn" id="btnTermSend" type="button" data-tooltip="Send command" aria-label="Send command" onclick="sendCustomTerminalCmd()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+   * MODAL: Help & Reference
+   * ======================================================================== -->
+  <div class="modal-overlay" id="modalHelp">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">System Monitor Studio · Architecture &amp; Protocol</div>
+        <button class="icon-btn" onclick="closeHelpModal()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="help-section">
+          <h4>LovyanGFX Circular Gauge Architecture</h4>
+          <p>
+            The canvas renders the exact real-world display logic of <code>system_monitor_display.cpp</code> on a 240×240 GC9A01 circular screen:
+          </p>
+          <ul style="padding-left: 20px; display: flex; flex-direction: column; gap: 4px;">
+            <li><strong>Solid Gauge Arc</strong>: 270° sweep (from 135° to 405°) with 12px width (outer radius 102px, inner radius 90px).</li>
+            <li><strong>Tick Scale</strong>: 20 radial ticks on the inner track with major marks every 5th step.</li>
+            <li><strong>Peak &amp; Threshold Spoke Markers</strong>: 60-sample peak line plus warning and critical limit markers.</li>
+            <li><strong>Center Cluster</strong>: Single horizontal baseline with geometric degree symbol (for °C) or unit badge.</li>
+            <li><strong>Dual Curved Text</strong>: Top arc (270°) displays the active metric; bottom arc (90°) displays hardware name or status, both reading naturally from Left-to-Right.</li>
+            <li><strong>Offline Mode</strong>: Rotating beacon arc and disconnected monitor icon when no PC communication is received.</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h4>Serial Packet Protocol</h4>
+          <p>The PC sender streams telemetry lines over serial:</p>
+          <ul style="padding-left: 20px; display: flex; flex-direction: column; gap: 4px;">
+            <li><code>!pc_hw_info &lt;cpu&gt;|&lt;gpu&gt;|&lt;ram&gt;|&lt;ssd&gt;|&lt;net&gt;</code>: Sets hardware device names.</li>
+            <li><code>!pc_hw &lt;seq&gt; &lt;cpu_t&gt; &lt;gpu_t&gt; &lt;ssd_t&gt; &lt;cpu_load&gt; &lt;gpu_load&gt; &lt;ram_u&gt; &lt;ram_tot&gt; &lt;vram_u&gt; &lt;vram_tot&gt; &lt;fan_cpu&gt; &lt;fan_case&gt; &lt;fan_gpu&gt; &lt;cpu_w&gt; &lt;gpu_w&gt; &lt;net_down&gt; &lt;net_up&gt; [cores]</code></li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-dialog primary" onclick="closeHelpModal()">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-msg" id="toastMsg"></div>
+
+  <!-- ========================================================================
+   * 6. Application Engine & LovyanGFX Canvas Simulation
+   * ======================================================================== -->
+  <script src="js/state.js"></script>
+  <script src="js/display-renderer.js"></script>
+  <script src="js/telemetry-controls.js"></script>
+  <script src="js/serial-terminal.js"></script>
+</body>
+</html>
